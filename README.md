@@ -1,49 +1,85 @@
 # Telltale
 
-A system health monitor that surfaces critical-but-silent OS events. Windows quietly logs disk failures, filesystem corruption, hardware errors, and more — but rarely tells you about them until it's too late. Telltale watches for these events and tells you what matters, in plain English.
+Telltale is a proactive system event monitor. It watches for high-signal OS events that are often logged silently and surfaces them with actionable output.
 
-Think of it as a nicer, more proactive Event Viewer — but only for the things you actually need to know.
+## Notification behavior
 
-## Status
+- `Critical` and `Warning` alerts trigger notifications by default.
+- `Info` alerts are stored and shown in CLI output, but do not notify.
+- Duplicate events are deduplicated by `(rule_id, fingerprint)` and cooldown windows.
+- Notifications are fire-and-forget and do not block the daemon loop.
 
-Early development. The core engine and Linux journald source are working. Windows Event Log support is next.
+## Platform support
 
-## Build
+| Platform | Status | Notes |
+|---|---|---|
+| Windows | Full (v0.1 scope) | Event Log source, Windows rules, toast notifications |
+| Linux | Dev/experimental | journald source for development bootstrap; no native notifications yet |
+| macOS | Not implemented | Planned later |
 
-Requires [Rust](https://rustup.rs/) (edition 2024).
+## CLI usage
 
-```
+Build:
+
+```bash
 cargo build
 ```
 
-## Run
+Run daemon:
 
-Start the daemon to watch for system events in real time:
-
-```
-telltale daemon
+```bash
+cargo run -p telltale -- daemon
 ```
 
-On Linux, this tails `journalctl` and matches against curated rules. Matched alerts are printed to the terminal with severity, explanation, and recommended action.
+Show status:
 
-## Test
-
+```bash
+cargo run -p telltale -- status
 ```
+
+Show recent alerts:
+
+```bash
+cargo run -p telltale -- recent --limit 20
+cargo run -p telltale -- recent --limit 10 --severity critical
+```
+
+List and inspect rules:
+
+```bash
+cargo run -p telltale -- rules list
+cargo run -p telltale -- rules show win.disk.bad_block
+```
+
+Run tests:
+
+```bash
 cargo test --workspace
 ```
 
 ## Architecture
 
-- **telltale-core** (lib) — platform-agnostic event types, rule definitions, matching engine with dedup/cooldown
-- **telltale** (bin) — CLI entry point, platform-specific event sources, terminal output
+- `crates/telltale-core`: core types, matching engine, rules, and SQLite store
+- `crates/telltale`: CLI app, event sources, notification adapters, daemon orchestration
 
-Rules are defined in Rust as function pointers (`fn(&Event) -> bool`), organized by platform under `crates/telltale-core/src/knowledge/`. Each rule includes a human-readable title, description, recommended action, and cooldown period.
+## Contributing
+
+Rule contributions are welcome.
+
+1. Pick the platform rules file:
+- `crates/telltale-core/src/knowledge/windows.rs`
+- `crates/telltale-core/src/knowledge/linux.rs`
+2. Add a `match_fn` and `fingerprint_fn`.
+3. Add a `Rule` entry with:
+- unique `id`
+- `severity`
+- user-facing `title`, `description`, and `recommended_action`
+- sensible `cooldown_secs`
+4. Add unit tests for the new rule match behavior.
+5. Run `cargo fmt` and `cargo test --workspace`.
+
+See [docs/rules.md](docs/rules.md) for detailed rule structure and current rule inventory.
 
 ## Roadmap
 
-See [PLAN.md](PLAN.md) for the full implementation plan. In short:
-
-- **Milestone A** — Core engine + journald source + console output *(done)*
-- **Milestone B** — Windows Event Log source + Windows rules
-- **Milestone C** — SQLite persistence + CLI commands (`status`, `recent`, `rules`)
-- **Milestone D** — Native OS notifications + docs + release
+See [PLAN.md](PLAN.md) for milestone context and sequencing.

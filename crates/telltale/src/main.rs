@@ -1,5 +1,6 @@
 mod app;
 mod daemon;
+mod notify;
 mod output;
 mod sources;
 

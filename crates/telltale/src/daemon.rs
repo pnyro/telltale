@@ -8,6 +8,7 @@ use std::time::{Duration, SystemTime};
 use telltale_core::{Engine, Platform, Store};
 
 use crate::app;
+use crate::notify;
 use crate::output;
 use crate::sources;
 
@@ -37,6 +38,7 @@ pub fn run() -> Result<(), Box<dyn Error + Send + Sync>> {
 
     let mut source = sources::default_source()?;
     let source_name = source.name();
+    let notifier = notify::default_notifier();
 
     let (tx, rx) = mpsc::channel();
 
@@ -69,6 +71,12 @@ pub fn run() -> Result<(), Box<dyn Error + Send + Sync>> {
 
             if !alert.suppressed {
                 output::print_alert(&alert);
+
+                if notify::is_notifiable_severity(alert.severity) {
+                    if let Err(err) = notifier.notify(&alert) {
+                        eprintln!("failed to emit notification: {err}");
+                    }
+                }
             }
         }
 
