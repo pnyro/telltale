@@ -13,7 +13,11 @@ pub fn is_notifiable_severity(severity: Severity) -> bool {
 pub fn default_notifier() -> Box<dyn Notifier> {
     #[cfg(target_os = "windows")]
     {
-        Box::new(windows_impl::WindowsToastNotifier::new("Telltale"))
+        let notifier = windows_impl::WindowsToastNotifier::new();
+        if let Err(err) = notifier.ensure_registered() {
+            eprintln!("warning: failed to register app for notifications: {err}");
+        }
+        Box::new(notifier)
     }
 
     #[cfg(not(target_os = "windows"))]
@@ -37,23 +41,84 @@ mod windows_impl {
     use std::error::Error;
     use std::thread;
 
+    use windows::core::HSTRING;
     use windows::Data::Xml::Dom::XmlDocument;
     use windows::UI::Notifications::{ToastNotification, ToastNotificationManager};
-    use windows::core::HSTRING;
+    use windows::Win32::Foundation::ERROR_SUCCESS;
+    use windows::Win32::System::Registry::{
+        RegCloseKey, RegCreateKeyExW, RegSetValueExW, HKEY, HKEY_CURRENT_USER, KEY_WRITE,
+        REG_OPTION_NON_VOLATILE, REG_SZ,
+    };
 
     use telltale_core::Alert;
 
     use super::Notifier;
 
-    pub struct WindowsToastNotifier {
-        app_id: String,
-    }
+    const AUMID: &str = "Telltale.SystemMonitor";
+    const DISPLAY_NAME: &str = "Telltale";
+
+    pub struct WindowsToastNotifier;
 
     impl WindowsToastNotifier {
-        pub fn new(app_id: &str) -> Self {
-            Self {
-                app_id: app_id.to_string(),
+        pub fn new() -> Self {
+            Self
+        }
+
+        /// Register Telltale's AUMID in the Windows registry so toast notifications
+        /// are accepted and displayed. Creates a Start Menu shortcut-like registry
+        /// entry under HKCU\Software\Classes\AppUserModelId\{AUMID}.
+        pub fn ensure_registered(&self) -> Result<(), Box<dyn Error + Send + Sync>> {
+            unsafe {
+                let subkey = format!("Software\\Classes\\AppUserModelId\\{AUMID}");
+                let subkey_w: Vec<u16> = subkey.encode_utf16().chain(std::iter::once(0)).collect();
+                let mut hkey = HKEY::default();
+                let mut disposition = 0u32;
+
+                let result = RegCreateKeyExW(
+                    HKEY_CURRENT_USER,
+                    windows::core::PCWSTR(subkey_w.as_ptr()),
+                    0,
+                    None,
+                    REG_OPTION_NON_VOLATILE,
+                    KEY_WRITE,
+                    None,
+                    &mut hkey,
+                    Some(&mut disposition as *mut u32 as *mut _),
+                );
+
+                if result != ERROR_SUCCESS {
+                    return Err(format!("RegCreateKeyExW failed: {result:?}").into());
+                }
+
+                // Set DisplayName value
+                let value_name: Vec<u16> = "DisplayName"
+                    .encode_utf16()
+                    .chain(std::iter::once(0))
+                    .collect();
+                let value_data: Vec<u16> = DISPLAY_NAME
+                    .encode_utf16()
+                    .chain(std::iter::once(0))
+                    .collect();
+
+                let set_result = RegSetValueExW(
+                    hkey,
+                    windows::core::PCWSTR(value_name.as_ptr()),
+                    0,
+                    REG_SZ,
+                    Some(std::slice::from_raw_parts(
+                        value_data.as_ptr() as *const u8,
+                        value_data.len() * 2,
+                    )),
+                );
+
+                let _ = RegCloseKey(hkey);
+
+                if set_result != ERROR_SUCCESS {
+                    return Err(format!("RegSetValueExW failed: {set_result:?}").into());
+                }
             }
+
+            Ok(())
         }
     }
 
@@ -61,12 +126,11 @@ mod windows_impl {
         fn notify(&self, alert: &Alert) -> Result<(), Box<dyn Error + Send + Sync>> {
             let title = alert.title.clone();
             let body = format!("{} Action: {}", alert.description, alert.recommended_action);
-            let app_id = self.app_id.clone();
 
             thread::Builder::new()
                 .name("telltale-toast".to_string())
                 .spawn(move || {
-                    if let Err(err) = show_toast(&app_id, &title, &body) {
+                    if let Err(err) = show_toast(&title, &body) {
                         eprintln!("notification error: {err}");
                     }
                 })
@@ -75,18 +139,27 @@ mod windows_impl {
         }
     }
 
-    fn show_toast(app_id: &str, title: &str, body: &str) -> windows::core::Result<()> {
+    fn show_toast(title: &str, body: &str) -> windows::core::Result<()> {
         let title = escape_xml(title);
         let body = escape_xml(body);
         let payload = format!(
-            "<toast><visual><binding template=\"ToastGeneric\"><text>{title}</text><text>{body}</text></binding></visual></toast>"
+            "<toast>\
+                <visual>\
+                    <binding template=\"ToastGeneric\">\
+                        <text>{title}</text>\
+                        <text>{body}</text>\
+                    </binding>\
+                </visual>\
+                <audio src=\"ms-winsoundevent:Notification.Default\"/>\
+            </toast>"
         );
 
         let doc = XmlDocument::new()?;
         doc.LoadXml(&HSTRING::from(payload))?;
 
         let toast = ToastNotification::CreateToastNotification(&doc)?;
-        let notifier = ToastNotificationManager::CreateToastNotifierWithId(&HSTRING::from(app_id))?;
+        let notifier =
+            ToastNotificationManager::CreateToastNotifierWithId(&HSTRING::from(AUMID))?;
         notifier.Show(&toast)
     }
 
