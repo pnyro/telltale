@@ -1,0 +1,135 @@
+[
+  {
+    "timestamp": 1772706572,
+    "platform": "Windows",
+    "source": "Microsoft-Windows-Kernel-Power",
+    "event_id": 41,
+    "message": "The system has rebooted without cleanly shutting down first.",
+    "metadata": {
+      "provider": "Microsoft-Windows-Kernel-Power",
+      "channel": "System",
+      "computer": "SAMPLE-PC",
+      "entity": "Microsoft-Windows-Kernel-Power"
+    }
+  },
+  {
+    "timestamp": 1772706601,
+    "platform": "Windows",
+    "source": "Tcpip",
+    "event_id": 4266,
+    "message": "TCP/IP failed to establish an outgoing UDP connection because the selected local endpoint was recently used to connect to the same remote endpoint.",
+    "metadata": {
+      "provider": "Tcpip",
+      "channel": "System",
+      "computer": "SAMPLE-PC",
+      "entity": "Tcpip"
+    }
+  },
+  {
+    "timestamp": 1772706625,
+    "platform": "Windows",
+    "source": "Application Error",
+    "event_id": 1000,
+    "message": "Faulting application name: AcmeSync.exe, version: 3.2.1.0, faulting module name: ntdll.dll",
+    "metadata": {
+      "provider": "Application Error",
+      "channel": "Application",
+      "computer": "SAMPLE-PC",
+      "entity": "Application Error",
+      "device": "AcmeSync.exe"
+    }
+  },
+  {
+    "timestamp": 1772706658,
+    "platform": "Windows",
+    "source": "Application Hang",
+    "event_id": 1002,
+    "message": "The program ReportBuilder.exe version 2.4.0.0 stopped interacting with Windows and was closed.",
+    "metadata": {
+      "provider": "Application Hang",
+      "channel": "Application",
+      "computer": "SAMPLE-PC",
+      "entity": "Application Hang",
+      "device": "ReportBuilder.exe"
+    }
+  },
+  {
+    "timestamp": 1772706702,
+    "platform": "Windows",
+    "source": "Microsoft-Windows-WindowsUpdateClient",
+    "event_id": 20,
+    "message": "Installation Failure: Windows failed to install the following update with error 0x80070005: 2026-03 Cumulative Update for Windows 11 for x64-based Systems (KB5039999).",
+    "metadata": {
+      "provider": "Microsoft-Windows-WindowsUpdateClient",
+      "channel": "System",
+      "computer": "SAMPLE-PC",
+      "entity": "Microsoft-Windows-WindowsUpdateClient"
+    }
+  },
+  {
+    "timestamp": 1772706740,
+    "platform": "Windows",
+    "source": "Volsnap",
+    "event_id": 36,
+    "message": "The shadow copies of volume C: were aborted because the shadow copy storage could not grow in time.",
+    "metadata": {
+      "provider": "Volsnap",
+      "channel": "System",
+      "computer": "SAMPLE-PC",
+      "entity": "Volsnap"
+    }
+  },
+  {
+    "timestamp": 1772706793,
+    "platform": "Windows",
+    "source": "Service Control Manager",
+    "event_id": 7001,
+    "message": "The Print Spooler service depends on the RPC Endpoint Mapper service which failed to start because of the following error: The dependency service or group failed to start.",
+    "metadata": {
+      "provider": "Service Control Manager",
+      "channel": "System",
+      "computer": "SAMPLE-PC",
+      "entity": "Service Control Manager",
+      "device": "Print Spooler"
+    }
+  },
+  {
+    "timestamp": 1772706831,
+    "platform": "Windows",
+    "source": "VSS",
+    "event_id": 8193,
+    "message": "Volume Shadow Copy Service error: Unexpected error querying for the IVssWriterCallback interface.",
+    "metadata": {
+      "provider": "VSS",
+      "channel": "Application",
+      "computer": "SAMPLE-PC",
+      "entity": "VSS"
+    }
+  },
+  {
+    "timestamp": 1772706868,
+    "platform": "Windows",
+    "source": "Microsoft-Windows-DNS-Client",
+    "event_id": 1014,
+    "message": "Name resolution for the name api.example.com timed out after none of the configured DNS servers responded.",
+    "metadata": {
+      "provider": "Microsoft-Windows-DNS-Client",
+      "channel": "System",
+      "computer": "SAMPLE-PC",
+      "entity": "Microsoft-Windows-DNS-Client"
+    }
+  },
+  {
+    "timestamp": 1772706921,
+    "platform": "Windows",
+    "source": ".NET Runtime",
+    "event_id": 1026,
+    "message": "Application: AcmeSync.exe Framework Version: v4.0.30319 Description: The process was terminated due to an unhandled exception.",
+    "metadata": {
+      "provider": ".NET Runtime",
+      "channel": "Application",
+      "computer": "SAMPLE-PC",
+      "entity": ".NET Runtime"
+    }
+  }
+]

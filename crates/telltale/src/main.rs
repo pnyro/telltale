@@ -1,11 +1,14 @@
 mod app;
+mod capture;
 mod daemon;
 mod notify;
 mod output;
+mod replay;
 mod scan;
 mod sources;
 
 use std::error::Error;
+use std::path::PathBuf;
 use std::time::SystemTime;
 
 use clap::{Parser, Subcommand, ValueEnum};
@@ -31,6 +34,18 @@ enum Commands {
     Scan {
         #[arg(long, default_value_t = 48)]
         hours: u64,
+        #[arg(long, value_enum)]
+        severity: Option<SeverityArg>,
+    },
+    Capture {
+        #[arg(long, default_value_t = 48)]
+        hours: u64,
+        #[arg(long, default_value = "events.json")]
+        output: PathBuf,
+    },
+    Replay {
+        #[arg(long)]
+        input: PathBuf,
         #[arg(long, value_enum)]
         severity: Option<SeverityArg>,
     },
@@ -67,6 +82,10 @@ fn run() -> Result<(), Box<dyn Error + Send + Sync>> {
         Commands::Daemon => daemon::run(),
         Commands::Simulate { interval, count } => daemon::run_simulated(interval, count),
         Commands::Scan { hours, severity } => scan::run(hours, severity.map(severity_from_arg)),
+        Commands::Capture { hours, output } => capture::run(hours, &output),
+        Commands::Replay { input, severity } => {
+            replay::run(&input, severity.map(severity_from_arg))
+        }
         Commands::Status => status_command(),
         Commands::Recent { limit, severity } => recent_command(limit, severity),
         Commands::Rules { command } => rules_command(command),

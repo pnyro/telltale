@@ -62,3 +62,10 @@ cargo test --workspace
 | `linux.ext4_error` | Critical | EXT4 filesystem error messages |
 | `linux.auth_failure` | Warning | Authentication failure / failed password patterns |
 | `linux.systemd_service_failure` | Warning | systemd unit failure-result patterns |
+
+## Developing rules with capture/replay
+
+1. Capture events from a real machine: `telltale capture --hours 48 --output my_events.json`
+2. Replay to see what matches: `telltale replay --input my_events.json`
+3. Add/modify rules, then replay again to verify
+4. Save representative events as fixtures in `fixtures/` for CI
