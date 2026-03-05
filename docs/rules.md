@@ -43,6 +43,16 @@ cargo test --workspace
 | `win.system.unexpected_shutdown` | Warning | EventLog provider Event ID 6008 (unexpected shutdown) |
 | `win.whea.hardware_error` | Critical | WHEA-Logger Event IDs 17-20 (hardware error events) |
 | `win.bugcheck.summary` | Critical | BugCheck provider Event ID 1001 (BSOD summary) |
+| `win.kernel_power.dirty_reboot` | Critical | Microsoft-Windows-Kernel-Power Event ID 41 (dirty reboot/reset) |
+| `win.tcpip.port_exhaustion` | Warning | Tcpip Event IDs 4231/4266 (ephemeral TCP/UDP port exhaustion) |
+| `win.app.crash` | Warning | Application Error Event ID 1000 (application crash) |
+| `win.app.hang` | Info | Application Hang Event ID 1002 (application not responding) |
+| `win.update.install_failure` | Warning | WindowsUpdateClient Event ID 20 (update install failure) |
+| `win.volsnap.shadow_copy_failed` | Warning | Volsnap Event ID 36 (shadow copy aborted due to storage limits) |
+| `win.service.dependency_failure` | Warning | Service Control Manager Event ID 7001 (dependency startup failure) |
+| `win.vss.error` | Warning | VSS Event ID 8193 (Volume Shadow Copy Service error) |
+| `win.dns.timeout` | Info | DNS Client Event ID 1014 (DNS resolution timeout) |
+| `win.dotnet.unhandled_exception` | Warning | .NET Runtime Event ID 1026 (unhandled exception crash) |
 
 ## Linux (dev/experimental)
 
