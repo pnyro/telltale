@@ -42,6 +42,24 @@ impl Engine {
         self.rules.len()
     }
 
+    pub fn seed_alert_state(
+        &mut self,
+        rule_id: &str,
+        fingerprint: &str,
+        first_seen: SystemTime,
+        last_seen: SystemTime,
+        occurrence_count: u32,
+    ) {
+        self.active.insert(
+            (rule_id.to_string(), fingerprint.to_string()),
+            AlertState {
+                first_seen,
+                last_seen,
+                occurrence_count,
+            },
+        );
+    }
+
     pub fn process(&mut self, event: &Event) -> Vec<Alert> {
         let mut alerts = Vec::new();
 

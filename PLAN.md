@@ -321,6 +321,9 @@ Review process complete. Both plans aligned on architecture; remaining delta was
 - **C**: SQLite persistence + CLI read commands (`status`, `recent`, `rules`) + `daemon_state` checkpoint
 - **D**: Native notifications + docs + release artifact
 
+### Future consideration (post-v0.1)
+- **Historical scan on first run**: On first startup (no `daemon_state` checkpoint), scan recent events (last 24-48h) with dedup to catch events that already happened. Avoids the "trust me I'm watching" gap where telltale misses events that occurred before it was installed.
+
 ### v0.1 Release Gate
 All of the following must be complete:
 - Windows Event Log source working
