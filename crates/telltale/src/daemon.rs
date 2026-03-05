@@ -11,10 +11,25 @@ use crate::app;
 use crate::notify;
 use crate::output;
 use crate::sources;
+use crate::sources::EventSource;
 
 const CHECKPOINT_KEY: &str = "last_event_timestamp";
 
 pub fn run() -> Result<(), Box<dyn Error + Send + Sync>> {
+    run_with_source(sources::default_source()?, false)
+}
+
+pub fn run_simulated(interval_secs: u64, count: u64) -> Result<(), Box<dyn Error + Send + Sync>> {
+    run_with_source(
+        sources::simulated_source(Duration::from_secs(interval_secs), count)?,
+        count != 0,
+    )
+}
+
+fn run_with_source(
+    mut source: Box<dyn EventSource>,
+    allow_clean_source_close: bool,
+) -> Result<(), Box<dyn Error + Send + Sync>> {
     let rules = app::rules_for_current_os();
 
     if rules.is_empty() {
@@ -35,12 +50,11 @@ pub fn run() -> Result<(), Box<dyn Error + Send + Sync>> {
     let store = Store::open(&db_path)?;
 
     let restored = seed_engine_from_store(&mut engine, &store, &rule_cooldowns)?;
-
-    let mut source = sources::default_source()?;
     let source_name = source.name();
     let notifier = notify::default_notifier();
 
     let (tx, rx) = mpsc::channel();
+    let (source_state_tx, source_state_rx) = mpsc::sync_channel::<Result<(), String>>(1);
 
     eprintln!(
         "telltale daemon started: source={source_name}, rules_loaded={}, restored_alerts={}, db={}",
@@ -50,14 +64,13 @@ pub fn run() -> Result<(), Box<dyn Error + Send + Sync>> {
     );
 
     thread::spawn(move || {
-        if let Err(err) = source.watch(tx) {
-            eprintln!("source error ({source_name}): {err}");
-        }
+        let source_result = source.watch(tx).map_err(|err| err.to_string());
+        let _ = source_state_tx.send(source_result);
     });
 
     let mut seen_events: u64 = 0;
 
-    for event in rx {
+    while let Ok(event) = rx.recv() {
         seen_events = seen_events.saturating_add(1);
         let checkpoint_value = timestamp_to_string(event.timestamp);
 
@@ -92,7 +105,12 @@ pub fn run() -> Result<(), Box<dyn Error + Send + Sync>> {
         }
     }
 
-    Err("event source closed unexpectedly".into())
+    match source_state_rx.recv() {
+        Ok(Ok(())) if allow_clean_source_close => Ok(()),
+        Ok(Ok(())) => Err("event source closed unexpectedly".into()),
+        Ok(Err(source_err)) => Err(format!("source error ({source_name}): {source_err}").into()),
+        Err(_) => Err(format!("source thread ended without status ({source_name})").into()),
+    }
 }
 
 fn seed_engine_from_store(

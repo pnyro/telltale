@@ -31,6 +31,13 @@ Run daemon:
 cargo run -p telltale -- daemon
 ```
 
+Run synthetic event simulation (full pipeline test):
+
+```bash
+cargo run -p telltale -- simulate
+cargo run -p telltale -- simulate --interval 1 --count 10
+```
+
 Show status:
 
 ```bash

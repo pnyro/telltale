@@ -21,6 +21,12 @@ struct Cli {
 #[derive(Subcommand)]
 enum Commands {
     Daemon,
+    Simulate {
+        #[arg(long, default_value_t = 5)]
+        interval: u64,
+        #[arg(long, default_value_t = 0)]
+        count: u64,
+    },
     Status,
     Recent {
         #[arg(long, default_value_t = 20)]
@@ -52,6 +58,7 @@ fn run() -> Result<(), Box<dyn Error + Send + Sync>> {
 
     match cli.command {
         Commands::Daemon => daemon::run(),
+        Commands::Simulate { interval, count } => daemon::run_simulated(interval, count),
         Commands::Status => status_command(),
         Commands::Recent { limit, severity } => recent_command(limit, severity),
         Commands::Rules { command } => rules_command(command),
