@@ -1,0 +1,7 @@
+[workspace]
+members = [
+    "crates/telltale-core",
+    "crates/telltale",
+]
+default-members = ["crates/telltale"]
+resolver = "2"
