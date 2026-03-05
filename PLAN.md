@@ -321,14 +321,82 @@ Review process complete. Both plans aligned on architecture; remaining delta was
 - **C**: SQLite persistence + CLI read commands (`status`, `recent`, `rules`) + `daemon_state` checkpoint
 - **D**: Native notifications + docs + release artifact
 
-### Future consideration (post-v0.1)
-- **Historical scan on first run**: On first startup (no `daemon_state` checkpoint), scan recent events (last 24-48h) with dedup to catch events that already happened. Avoids the "trust me I'm watching" gap where telltale misses events that occurred before it was installed.
-
-### v0.1 Release Gate
-All of the following must be complete:
+### v0.1 Release Gate — COMPLETE
+All of the following are complete:
 - Windows Event Log source working
-- At least 5 Windows rules tested and firing
+- 5 Windows rules tested and firing
 - Dedup with fingerprinting working
 - SQLite persistence with checkpoint/resume
 - Toast notifications for Critical/Warning
-- `daemon`, `status`, `recent`, `rules` CLI commands working
+- `daemon`, `status`, `recent`, `rules`, `simulate` CLI commands working
+
+---
+
+## v0.2 — Real-world validation & expanded knowledge base
+
+### Context
+v0.1 shipped with 5 Windows rules targeting rare-but-critical hardware events (disk bad blocks, NTFS corruption, WHEA, unexpected shutdown, BugCheck). Testing against a real Windows machine showed only 3 of 5 matching (the hardware ones require actual failures). Meanwhile, the Event Log contains dozens of **Warning/Error-level operational events** that are common, actionable, and invisible to users — the exact gap telltale exists to fill.
+
+v0.2 focuses on: (1) making telltale useful on a real machine today via historical scan, (2) expanding the rule set based on real observed events, and (3) building a capture/replay harness so every rule ships with a real event fixture.
+
+### Goals
+- `telltale scan` command for one-shot historical analysis
+- Event capture/export for building test fixtures from real machines
+- Expand Windows rules from 5 to ~15 based on real Event Log data
+- Every rule has a test fixture from a captured real event
+
+### Non-goals (deferred)
+- Linux notifications, macOS support
+- Tauri GUI (follows once core is settled)
+- License selection (repo is private)
+
+### New Windows rules to add (based on real Event Log analysis)
+
+**Tier 1 — High value, commonly seen:**
+
+| Rule ID | Event ID | Source | Severity | What it catches |
+|---|---|---|---|---|
+| `win.kernel_power.dirty_reboot` | 41 | Microsoft-Windows-Kernel-Power | Critical | System rebooted without clean shutdown (companion to 6008) |
+| `win.tcpip.port_exhaustion` | 4266, 4231 | Tcpip | Warning | Ephemeral port exhaustion — causes silent app/network failures |
+| `win.app.crash` | 1000 | Application Error | Warning | Application faulted (crash with module info) |
+| `win.app.hang` | 1002 | Application Hang | Warning | Application stopped responding |
+| `win.update.install_failure` | 20 | Microsoft-Windows-WindowsUpdateClient | Warning | Windows Update failed to install silently |
+| `win.volsnap.shadow_copy_failed` | 36 | Volsnap | Warning | Shadow copies aborted — backup/restore silently broken |
+| `win.service.dependency_failure` | 7001 | Service Control Manager | Warning | Service won't start due to dependency failure |
+
+**Tier 2 — Useful but noisier:**
+
+| Rule ID | Event ID | Source | Severity | What it catches |
+|---|---|---|---|---|
+| `win.vss.error` | 8193 | VSS | Warning | Volume Shadow Copy Service error — backup infra failing |
+| `win.dns.timeout` | 1014 | Microsoft-Windows-DNS-Client | Info | DNS resolution timeout (useful in bursts, noisy individually) |
+| `win.dotnet.unhandled_exception` | 1026 | .NET Runtime | Warning | .NET app terminated by unhandled exception |
+
+### Milestones
+
+#### E: Historical scan (`telltale scan`)
+- Add `scan` subcommand: one-shot read of recent Event Log history (default 48h, configurable)
+- Reuse existing Engine for matching + dedup
+- For Windows: use `EvtQuery` (pull/historical) instead of `EvtSubscribe` (push/live)
+- Output: same colored terminal format as daemon, plus summary ("scanned N events, M alerts found")
+- Persist scan results to SQLite like daemon alerts
+- This is both a user feature and a dev testing tool
+
+#### F: Expanded rules + real event fixtures
+- Add Tier 1 rules (7 new rules)
+- Add Tier 2 rules (3 new rules)
+- For each rule: capture a real event from the test machine as a JSON fixture
+- Unit tests load fixtures and assert rule matches
+- New test infrastructure: `fixtures/` directory with captured events, helper to deserialize into `Event`
+
+#### G: Event capture/replay harness
+- `telltale capture --duration 60 --output events.json` — record raw events for a time window
+- `telltale replay --input events.json` — feed captured events through the engine
+- Fixture format: JSON array of serialized `Event` structs
+- This closes the loop: capture on real machine → commit fixture → CI tests against real data
+
+### v0.2 Release Gate
+- `telltale scan` working on Windows with configurable time window
+- At least 12 Windows rules with real event test fixtures
+- Capture and replay commands functional
+- All existing tests still passing
