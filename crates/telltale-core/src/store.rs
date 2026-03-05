@@ -74,7 +74,7 @@ impl Store {
                 description = excluded.description,
                 recommended_action = excluded.recommended_action,
                 last_seen = excluded.last_seen,
-                occurrence_count = alerts.occurrence_count + 1
+                occurrence_count = MAX(alerts.occurrence_count, excluded.occurrence_count)
             ",
             params![
                 alert.rule_id,

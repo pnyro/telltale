@@ -50,6 +50,7 @@ telltale simulate --interval 2 --count 5
 |---|---|
 | `telltale daemon` | Run the event monitor (foreground) |
 | `telltale simulate [--interval SECS] [--count N]` | Generate synthetic events through the full pipeline |
+| `telltale scan [--hours N] [--severity LEVEL]` | One-shot historical scan of recent event logs |
 | `telltale status` | Show daemon database status, rule count, last checkpoint |
 | `telltale recent [--limit N] [--severity LEVEL]` | Display recent alerts from the database |
 | `telltale rules list` | List all rules for the current platform |

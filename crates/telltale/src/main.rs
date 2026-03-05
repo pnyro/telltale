@@ -2,6 +2,7 @@ mod app;
 mod daemon;
 mod notify;
 mod output;
+mod scan;
 mod sources;
 
 use std::error::Error;
@@ -26,6 +27,12 @@ enum Commands {
         interval: u64,
         #[arg(long, default_value_t = 0)]
         count: u64,
+    },
+    Scan {
+        #[arg(long, default_value_t = 48)]
+        hours: u64,
+        #[arg(long, value_enum)]
+        severity: Option<SeverityArg>,
     },
     Status,
     Recent {
@@ -59,6 +66,7 @@ fn run() -> Result<(), Box<dyn Error + Send + Sync>> {
     match cli.command {
         Commands::Daemon => daemon::run(),
         Commands::Simulate { interval, count } => daemon::run_simulated(interval, count),
+        Commands::Scan { hours, severity } => scan::run(hours, severity.map(severity_from_arg)),
         Commands::Status => status_command(),
         Commands::Recent { limit, severity } => recent_command(limit, severity),
         Commands::Rules { command } => rules_command(command),
@@ -102,11 +110,7 @@ fn recent_command(
         return Ok(());
     }
 
-    let severity_filter = severity.map(|item| match item {
-        SeverityArg::Critical => Severity::Critical,
-        SeverityArg::Warning => Severity::Warning,
-        SeverityArg::Info => Severity::Info,
-    });
+    let severity_filter = severity.map(severity_from_arg);
 
     let store = Store::open(&db_path)?;
     let alerts = store.get_recent(limit, severity_filter)?;
@@ -170,6 +174,14 @@ fn severity_label(severity: Severity) -> &'static str {
         Severity::Critical => "critical",
         Severity::Warning => "warning",
         Severity::Info => "info",
+    }
+}
+
+fn severity_from_arg(value: SeverityArg) -> Severity {
+    match value {
+        SeverityArg::Critical => Severity::Critical,
+        SeverityArg::Warning => Severity::Warning,
+        SeverityArg::Info => Severity::Info,
     }
 }
 
