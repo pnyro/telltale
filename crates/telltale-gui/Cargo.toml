@@ -11,3 +11,6 @@ tauri = { version = "2", features = [] }
 telltale-core = { path = "../telltale-core" }
 serde = { version = "1", features = ["derive"] }
 dirs = "5.0.1"
+
+[target.'cfg(target_os = "windows")'.dependencies]
+window-vibrancy = "0.1"

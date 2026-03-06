@@ -3495,6 +3495,7 @@ dependencies = [
  "tauri",
  "tauri-build",
  "telltale-core",
+ "window-vibrancy",
 ]
 
 [[package]]
