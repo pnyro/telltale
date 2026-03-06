@@ -9,6 +9,10 @@
   let alerts = $state([]);
   let loading = $state(true);
   let error = $state('');
+  let scanHours = $state(48);
+  let scanning = $state(false);
+  let scanResult = $state(null);
+  let scanError = $state('');
 
   onMount(() => {
     void load();
@@ -35,12 +39,43 @@
     }
   }
 
+  async function runScan() {
+    scanning = true;
+    scanError = '';
+
+    try {
+      const parsed = Number(scanHours);
+      const hours = Number.isFinite(parsed) ? Math.max(0, Math.floor(parsed)) : 48;
+      scanHours = hours;
+
+      scanResult = await invoke('run_scan', { hours, severity: null });
+      await load();
+    } catch (err) {
+      scanError = String(err);
+    } finally {
+      scanning = false;
+    }
+  }
+
   function formatTimestamp(epochSeconds) {
     if (!epochSeconds) {
       return 'never';
     }
 
     return new Date(epochSeconds * 1000).toLocaleString();
+  }
+
+  function formatCheckpoint(value) {
+    if (!value) {
+      return 'none';
+    }
+
+    const epochSeconds = Number(value);
+    if (!Number.isFinite(epochSeconds)) {
+      return value;
+    }
+
+    return formatTimestamp(epochSeconds);
   }
 </script>
 
@@ -60,6 +95,33 @@
     </article>
   </div>
 
+  <section class="panel scan-panel">
+    <div class="panel-header">
+      <h2>Scan</h2>
+    </div>
+
+    <div class="scan-controls">
+      <label class="scan-input">
+        <span>Hours</span>
+        <input type="number" min="0" step="1" bind:value={scanHours} disabled={scanning} />
+      </label>
+
+      <button type="button" onclick={runScan} disabled={scanning}>
+        {scanning ? 'Scanning...' : 'Run Scan'}
+      </button>
+    </div>
+
+    {#if scanError}
+      <p class="empty scan-error">Scan failed: {scanError}</p>
+    {/if}
+
+    {#if scanResult}
+      <p class="scan-result">
+        Events scanned: {scanResult.events_scanned} | Alerts found: {scanResult.alerts_found} | New alerts: {scanResult.new_alerts}
+      </p>
+    {/if}
+  </section>
+
   <section class="panel">
     <div class="panel-header">
       <h2>Recent Alerts</h2>
@@ -70,6 +132,8 @@
 
     {#if error}
       <p class="empty">Failed to load dashboard data: {error}</p>
+    {:else if !status?.db_exists}
+      <p class="empty">No data yet. Run a scan to get started.</p>
     {:else if alerts.length === 0}
       <p class="empty">No recent alerts.</p>
     {:else}
@@ -95,7 +159,7 @@
 
   <footer class="status-footer">
     <span>Rules loaded: {status?.rules_loaded ?? 0}</span>
-    <span>Last checkpoint: {status?.last_checkpoint ?? 'none'}</span>
+    <span>Last checkpoint: {formatCheckpoint(status?.last_checkpoint ?? null)}</span>
     <span class="mono">DB path: {status?.db_path ?? 'unknown'}</span>
   </footer>
 </section>

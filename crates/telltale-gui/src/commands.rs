@@ -1,8 +1,9 @@
+use std::fs;
 use std::path::PathBuf;
 use std::time::SystemTime;
 
 use serde::Serialize;
-use telltale_core::{Rule, Severity, Store, knowledge};
+use telltale_core::{Engine, Rule, Severity, Store, knowledge, sources};
 
 #[derive(Debug, Serialize)]
 pub struct StatusResponse {
@@ -42,6 +43,13 @@ pub struct RuleResponse {
     pub description: String,
     pub recommended_action: String,
     pub cooldown_secs: u64,
+}
+
+#[derive(Debug, Serialize)]
+pub struct ScanResult {
+    pub events_scanned: u64,
+    pub alerts_found: u64,
+    pub new_alerts: u64,
 }
 
 #[tauri::command]
@@ -147,6 +155,59 @@ pub fn get_rules() -> Result<Vec<RuleResponse>, String> {
         .collect())
 }
 
+#[tauri::command]
+pub fn run_scan(hours: u64, severity: Option<String>) -> Result<ScanResult, String> {
+    let rules = rules_for_current_os();
+    if rules.is_empty() {
+        return Err(format!("no rules available for {}", std::env::consts::OS));
+    }
+
+    let min_severity = match severity {
+        Some(value) => Some(parse_severity(&value)?),
+        None => None,
+    };
+
+    let db_path = database_path().map_err(|err| err.to_string())?;
+    if let Some(parent) = db_path.parent() {
+        fs::create_dir_all(parent).map_err(|err| err.to_string())?;
+    }
+    let store = Store::open(&db_path).map_err(|err| err.to_string())?;
+    let mut engine = Engine::new(rules);
+
+    // Chosen approach: use shared scan sources from telltale-core so CLI and GUI scan the same
+    // platform event streams without shelling out to the CLI binary.
+    let mut source = sources::default_historical_source().map_err(|err| err.to_string())?;
+    let events = source.scan(hours).map_err(|err| err.to_string())?;
+
+    let mut alerts_found = 0u64;
+    let mut new_alerts = 0u64;
+
+    for event in &events {
+        for alert in engine.process(event) {
+            let updated = store.update_alert(&alert).map_err(|err| err.to_string())?;
+            if !updated {
+                store.save_alert(&alert).map_err(|err| err.to_string())?;
+            }
+
+            let visible = should_show(alert.severity, min_severity);
+            if alert.suppressed || !visible {
+                continue;
+            }
+
+            alerts_found = alerts_found.saturating_add(1);
+            if !updated {
+                new_alerts = new_alerts.saturating_add(1);
+            }
+        }
+    }
+
+    Ok(ScanResult {
+        events_scanned: events.len() as u64,
+        alerts_found,
+        new_alerts,
+    })
+}
+
 fn rules_for_current_os() -> Vec<Rule> {
     match std::env::consts::OS {
         "linux" => knowledge::linux_rules(),
@@ -183,6 +244,21 @@ fn severity_label(severity: Severity) -> &'static str {
         Severity::Critical => "critical",
         Severity::Warning => "warning",
         Severity::Info => "info",
+    }
+}
+
+fn should_show(severity: Severity, minimum: Option<Severity>) -> bool {
+    match minimum {
+        Some(min) => severity_rank(severity) >= severity_rank(min),
+        None => true,
+    }
+}
+
+fn severity_rank(severity: Severity) -> u8 {
+    match severity {
+        Severity::Info => 0,
+        Severity::Warning => 1,
+        Severity::Critical => 2,
     }
 }
 

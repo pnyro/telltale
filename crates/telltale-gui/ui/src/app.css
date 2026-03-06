@@ -137,6 +137,42 @@ body {
   margin-bottom: 0.75rem;
 }
 
+.scan-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  align-items: end;
+}
+
+.scan-input {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  color: #a8b0c4;
+  font-size: 0.85rem;
+}
+
+.scan-input input {
+  width: 110px;
+  border: 1px solid #3d4b68;
+  border-radius: 6px;
+  background: #101827;
+  color: #d5d9e2;
+  padding: 0.35rem 0.45rem;
+  font: inherit;
+}
+
+.scan-result {
+  margin: 0.75rem 0 0;
+  color: #b7d3ff;
+  font-size: 0.9rem;
+}
+
+.scan-error {
+  margin-top: 0.75rem;
+  color: #ffb2b2;
+}
+
 .filter-tabs,
 .sort-controls {
   display: flex;

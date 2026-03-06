@@ -6,7 +6,8 @@ fn main() {
             commands::get_status,
             commands::get_recent_alerts,
             commands::get_alert_counts,
-            commands::get_rules
+            commands::get_rules,
+            commands::run_scan
         ])
         .run(tauri::generate_context!())
         .expect("error while running telltale-gui");
