@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-use telltale_core::{knowledge, Engine, Event};
+use telltale_core::{Engine, Event, knowledge};
 
 #[test]
 fn sample_windows_fixture_replays_against_windows_rules() {

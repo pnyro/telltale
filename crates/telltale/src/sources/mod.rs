@@ -35,8 +35,8 @@ pub fn default_source() -> Result<Box<dyn EventSource>, Box<dyn Error + Send + S
     Err("no default source for this OS".into())
 }
 
-pub fn default_historical_source(
-) -> Result<Box<dyn HistoricalEventSource>, Box<dyn Error + Send + Sync>> {
+pub fn default_historical_source()
+-> Result<Box<dyn HistoricalEventSource>, Box<dyn Error + Send + Sync>> {
     #[cfg(target_os = "linux")]
     {
         return Ok(Box::new(journald::JournaldSource::new()));

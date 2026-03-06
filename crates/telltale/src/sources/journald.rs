@@ -144,7 +144,9 @@ fn parse_iso_timestamp(line: &str) -> Option<SystemTime> {
     let after_time = &ts_str[19..];
     let offset_secs: i64 = if after_time.is_empty() || after_time == "Z" {
         0
-    } else if let Some(rest) = after_time.strip_prefix('+').or_else(|| after_time.strip_prefix('-'))
+    } else if let Some(rest) = after_time
+        .strip_prefix('+')
+        .or_else(|| after_time.strip_prefix('-'))
     {
         let sign: i64 = if after_time.starts_with('-') { -1 } else { 1 };
         let digits: String = rest.chars().filter(|c| c.is_ascii_digit()).collect();

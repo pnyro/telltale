@@ -1,5 +1,5 @@
 use crate::event::{Event, Platform, Severity};
-use crate::rule::{empty_fingerprint, Rule};
+use crate::rule::{Rule, empty_fingerprint};
 
 fn source_eq(event: &Event, expected: &str) -> bool {
     event.source.eq_ignore_ascii_case(expected)
@@ -23,11 +23,7 @@ fn extract_between_case_insensitive<'a>(text: &'a str, start: &str, end: &str) -
     let content_end = content_start + end_rel;
 
     let value = text[content_start..content_end].trim();
-    if value.is_empty() {
-        None
-    } else {
-        Some(value)
-    }
+    if value.is_empty() { None } else { Some(value) }
 }
 
 fn extract_kb_or_package_identifier(message: &str) -> Option<String> {
@@ -452,41 +448,51 @@ mod tests {
     #[test]
     fn matches_disk_bad_block_rule() {
         let event = make_event("Disk", 7);
-        assert!(rules()
-            .iter()
-            .any(|rule| rule.id == "win.disk.bad_block" && rule.matches(&event)));
+        assert!(
+            rules()
+                .iter()
+                .any(|rule| rule.id == "win.disk.bad_block" && rule.matches(&event))
+        );
     }
 
     #[test]
     fn matches_ntfs_corruption_rule() {
         let event = make_event("Ntfs", 55);
-        assert!(rules()
-            .iter()
-            .any(|rule| rule.id == "win.ntfs.corruption" && rule.matches(&event)));
+        assert!(
+            rules()
+                .iter()
+                .any(|rule| rule.id == "win.ntfs.corruption" && rule.matches(&event))
+        );
     }
 
     #[test]
     fn matches_unexpected_shutdown_rule() {
         let event = make_event("EventLog", 6008);
-        assert!(rules()
-            .iter()
-            .any(|rule| rule.id == "win.system.unexpected_shutdown" && rule.matches(&event)));
+        assert!(
+            rules()
+                .iter()
+                .any(|rule| rule.id == "win.system.unexpected_shutdown" && rule.matches(&event))
+        );
     }
 
     #[test]
     fn matches_whea_hardware_error_rule() {
         let event = make_event("Microsoft-Windows-WHEA-Logger", 18);
-        assert!(rules()
-            .iter()
-            .any(|rule| rule.id == "win.whea.hardware_error" && rule.matches(&event)));
+        assert!(
+            rules()
+                .iter()
+                .any(|rule| rule.id == "win.whea.hardware_error" && rule.matches(&event))
+        );
     }
 
     #[test]
     fn matches_bugcheck_rule() {
         let event = make_event("BugCheck", 1001);
-        assert!(rules()
-            .iter()
-            .any(|rule| rule.id == "win.bugcheck.summary" && rule.matches(&event)));
+        assert!(
+            rules()
+                .iter()
+                .any(|rule| rule.id == "win.bugcheck.summary" && rule.matches(&event))
+        );
     }
 
     #[test]

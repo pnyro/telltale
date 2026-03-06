@@ -41,14 +41,14 @@ mod windows_impl {
     use std::error::Error;
     use std::thread;
 
-    use windows::core::HSTRING;
     use windows::Data::Xml::Dom::XmlDocument;
     use windows::UI::Notifications::{ToastNotification, ToastNotificationManager};
     use windows::Win32::Foundation::ERROR_SUCCESS;
     use windows::Win32::System::Registry::{
-        RegCloseKey, RegCreateKeyExW, RegSetValueExW, HKEY, HKEY_CURRENT_USER, KEY_WRITE,
-        REG_OPTION_NON_VOLATILE, REG_SZ,
+        HKEY, HKEY_CURRENT_USER, KEY_WRITE, REG_OPTION_NON_VOLATILE, REG_SZ, RegCloseKey,
+        RegCreateKeyExW, RegSetValueExW,
     };
+    use windows::core::HSTRING;
 
     use telltale_core::Alert;
 
@@ -158,8 +158,7 @@ mod windows_impl {
         doc.LoadXml(&HSTRING::from(payload))?;
 
         let toast = ToastNotification::CreateToastNotification(&doc)?;
-        let notifier =
-            ToastNotificationManager::CreateToastNotifierWithId(&HSTRING::from(AUMID))?;
+        let notifier = ToastNotificationManager::CreateToastNotifierWithId(&HSTRING::from(AUMID))?;
         notifier.Show(&toast)
     }
 

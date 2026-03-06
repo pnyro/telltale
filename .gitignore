@@ -1,3 +1,5 @@
 /target
 .tmp
 .claude
+crates/telltale-gui/ui/node_modules
+crates/telltale-gui/ui/dist

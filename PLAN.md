@@ -395,8 +395,130 @@ v0.2 focuses on: (1) making telltale useful on a real machine today via historic
 - Fixture format: JSON array of serialized `Event` structs
 - This closes the loop: capture on real machine → commit fixture → CI tests against real data
 
-### v0.2 Release Gate
+### v0.2 Release Gate — COMPLETE
+All of the following are complete:
 - `telltale scan` working on Windows with configurable time window
-- At least 12 Windows rules with real event test fixtures
+- 15 Windows rules with real event test fixtures
 - Capture and replay commands functional
-- All existing tests still passing
+- All 26 tests passing
+
+---
+
+## v0.3 — Tauri GUI
+
+### Context
+CLI commands (`scan`, `recent`, `rules`, `daemon`) cover power users. A desktop GUI makes telltale accessible as an install-and-forget dashboard — same core engine and SQLite DB, visual presentation layer on top.
+
+### Goals
+- Tauri v2 desktop app as a new workspace member
+- Dashboard with alert summary, recent alerts, scan trigger
+- Alert list with severity filtering, detail view with descriptions + recommended actions
+- Rules reference view
+- Reads from the same SQLite DB the CLI daemon writes to
+
+### Non-goals (deferred)
+- System tray / daemon lifecycle management from GUI
+- Auto-start on boot
+- Notification preferences UI
+- Theme toggle
+- macOS / Linux GUI testing (Windows-first)
+- Auto-update mechanism
+
+### Architecture
+
+```
+crates/telltale-gui/
+├── Cargo.toml
+├── src/
+│   ├── main.rs             # Tauri entry point
+│   └── commands.rs         # Tauri IPC commands (thin wrappers around telltale-core)
+├── ui/                     # Svelte 5 frontend
+│   ├── package.json
+│   ├── vite.config.ts
+│   └── src/
+│       ├── main.ts
+│       ├── App.svelte
+│       └── lib/
+│           ├── Dashboard.svelte
+│           ├── AlertList.svelte
+│           ├── AlertDetail.svelte
+│           ├── RulesList.svelte
+│           └── ScanPanel.svelte
+└── tauri.conf.json
+```
+
+### Tauri IPC commands
+
+Thin wrappers over `telltale-core`. No business logic in the GUI crate.
+
+| Command | Maps to |
+|---|---|
+| `get_status()` | DB exists, rule count, checkpoint, alert count |
+| `get_recent_alerts(limit, severity?)` | `Store::get_recent()` |
+| `get_all_alerts()` | `Store::get_all_alerts()` |
+| `get_alert_counts()` | Count by severity (new Store query) |
+| `get_rules()` | `knowledge::windows_rules()` / `linux_rules()` |
+| `run_scan(hours, severity?)` | Reuses scan logic from CLI |
+
+### Frontend views
+
+**Dashboard** (landing page):
+- Summary cards: Critical / Warning / Info counts
+- Recent alerts (last 10)
+- Quick-scan button ("Scan last 48h")
+- Last checkpoint timestamp
+
+**Alerts** (full list):
+- Sortable table: severity, title, fingerprint, last seen, count
+- Severity filter tabs (All / Critical / Warning / Info)
+- Click row → detail panel
+
+**Alert Detail** (slide-out or modal):
+- Title, severity badge, rule ID
+- Description + recommended action
+- First seen / last seen / occurrence count
+- Fingerprint entity
+
+**Rules** (reference):
+- Table of all loaded rules with severity, title, description
+
+### Tech choices
+- **Tauri v2** — current stable, better IPC, smaller bundles
+- **Svelte 5** — Tauri default template, minimal JS
+- **Vite** — bundler (Tauri default)
+- **No CSS framework** — plain CSS, simple dashboard layout
+
+### Dev workflow
+- Develop in WSL, test on Windows
+- `cargo tauri dev` for hot-reload (WSLg or X11)
+- Build Windows installer with `cargo tauri build --target x86_64-pc-windows-msvc` or native build via sync script
+- GUI and CLI share the same SQLite DB path via `telltale-core`
+
+### Milestones
+
+#### H: Tauri scaffold + dashboard
+- New `telltale-gui` workspace member with Tauri v2 + Svelte 5
+- Implement `get_status()`, `get_recent_alerts()`, `get_alert_counts()` commands
+- Dashboard view with summary cards + recent alerts
+- Builds and runs on Windows
+
+#### I: Alert list + detail + rules views
+- Full alert list with severity filtering and sorting
+- Alert detail view
+- Rules reference page
+- Navigation between views
+
+#### J: Scan integration + polish
+- Scan trigger from GUI with progress feedback
+- Human-readable timestamp formatting
+- Empty states, error handling
+- Window title, icon
+
+### v0.3 Release Gate
+- Tauri app builds and runs on Windows
+- Dashboard shows alert summary and recent alerts
+- Full alert list with severity filtering
+- Alert detail with description + recommended action
+- Rules reference view
+- Scan triggerable from GUI
+- Reads from same SQLite DB as CLI daemon

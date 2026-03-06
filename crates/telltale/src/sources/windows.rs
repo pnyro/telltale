@@ -5,13 +5,13 @@ use std::sync::mpsc;
 use std::time::{Duration, SystemTime};
 
 use telltale_core::{Event, Platform};
-use windows::core::PCWSTR;
 use windows::Win32::Foundation::{HANDLE, WAIT_FAILED, WAIT_OBJECT_0};
 use windows::Win32::System::EventLog::{
-    EvtClose, EvtNext, EvtQuery, EvtQueryChannelPath, EvtQueryReverseDirection, EvtRender,
-    EvtRenderEventXml, EvtSubscribe, EvtSubscribeToFutureEvents, EVT_HANDLE,
+    EVT_HANDLE, EvtClose, EvtNext, EvtQuery, EvtQueryChannelPath, EvtQueryReverseDirection,
+    EvtRender, EvtRenderEventXml, EvtSubscribe, EvtSubscribeToFutureEvents,
 };
-use windows::Win32::System::Threading::{CreateEventW, WaitForMultipleObjects, INFINITE};
+use windows::Win32::System::Threading::{CreateEventW, INFINITE, WaitForMultipleObjects};
+use windows::core::PCWSTR;
 
 use super::{EventSource, HistoricalEventSource};
 
