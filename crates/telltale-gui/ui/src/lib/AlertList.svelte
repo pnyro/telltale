@@ -5,9 +5,20 @@
   import { invoke } from '@tauri-apps/api/core';
 
   import AlertDetail from './AlertDetail.svelte';
+  import { formatFingerprint, formatRelativeTime, formatTimestamp } from './format.js';
 
-  const FILTERS = ['all', 'critical', 'warning', 'info'];
-  const SORT_OPTIONS = ['last_seen', 'occurrence_count', 'severity'];
+  const FILTERS = [
+    { id: 'all', label: 'All' },
+    { id: 'critical', label: 'Critical' },
+    { id: 'warning', label: 'Warning' },
+    { id: 'info', label: 'Info' }
+  ];
+
+  const SORT_OPTIONS = [
+    { id: 'last_seen', label: 'Last seen' },
+    { id: 'occurrence_count', label: 'Count' },
+    { id: 'severity', label: 'Severity' }
+  ];
 
   let alerts = $state([]);
   let loading = $state(true);
@@ -15,14 +26,23 @@
   let filter = $state('all');
   let sortBy = $state('last_seen');
   let sortDirection = $state('desc');
+  let searchQuery = $state('');
   let selectedAlert = $state(null);
 
   onMount(() => {
     void loadAlerts();
   });
 
-  const sortedAlerts = $derived.by(() => {
-    const list = [...alerts];
+  const visibleAlerts = $derived.by(() => {
+    const query = searchQuery.trim().toLowerCase();
+    const list = alerts.filter((alert) => {
+      if (!query) {
+        return true;
+      }
+
+      return [alert.title, alert.rule_id, alert.fingerprint]
+        .some((value) => (value || '').toLowerCase().includes(query));
+    });
 
     list.sort((left, right) => {
       let result = 0;
@@ -90,14 +110,6 @@
     selectedAlert = null;
   }
 
-  function formatTimestamp(epochSeconds) {
-    if (!epochSeconds) {
-      return 'never';
-    }
-
-    return new Date(epochSeconds * 1000).toLocaleString();
-  }
-
   function severityRank(severity) {
     if (severity === 'critical') {
       return 0;
@@ -109,106 +121,128 @@
 
     return 2;
   }
-
-  function labelForFilter(value) {
-    if (value === 'all') {
-      return 'All';
-    }
-
-    return value[0].toUpperCase() + value.slice(1);
-  }
-
-  function labelForSort(value) {
-    if (value === 'last_seen') {
-      return 'Last Seen';
-    }
-
-    if (value === 'occurrence_count') {
-      return 'Count';
-    }
-
-    return 'Severity';
-  }
 </script>
 
-<section class="panel alert-list-panel">
-  <div class="panel-header">
-    <h2>Alert List</h2>
+<section class="alerts-view view-page">
+  <header class="view-header">
+    <div>
+      <p class="view-kicker">Alerts</p>
+      <h2>Investigate the live alert catalog</h2>
+      <p class="view-copy">
+        Filter by severity, search locally across alert metadata, and open the detail drawer when you need the full rule context.
+      </p>
+    </div>
     <button type="button" onclick={loadAlerts} disabled={loading}>
-      {loading ? 'Loading...' : 'Refresh'}
+      {loading ? 'Refreshing...' : 'Refresh Alerts'}
     </button>
-  </div>
+  </header>
 
-  <div class="panel-toolbar">
-    <div class="filter-tabs">
-      {#each FILTERS as option}
-        <button
-          type="button"
-          class={`filter-tab ${filter === option ? 'active' : ''}`}
-          onclick={() => setFilter(option)}
-        >
-          {labelForFilter(option)}
+  <section class="panel toolbar-panel">
+    <div class="control-row">
+      <div class="segmented-control" aria-label="Severity filters">
+        {#each FILTERS as option}
+          <button
+            type="button"
+            class={`segment-button ${filter === option.id ? 'active' : ''}`}
+            aria-pressed={filter === option.id}
+            onclick={() => setFilter(option.id)}
+          >
+            {option.label}
+          </button>
+        {/each}
+      </div>
+
+      <div class="segmented-control segmented-control-sort" aria-label="Sort alerts">
+        {#each SORT_OPTIONS as option}
+          <button
+            type="button"
+            class={`segment-button ${sortBy === option.id ? 'active' : ''}`}
+            aria-pressed={sortBy === option.id}
+            onclick={() => setSortBy(option.id)}
+          >
+            {option.label}
+          </button>
+        {/each}
+        <button type="button" class="segment-button" onclick={toggleSortDirection}>
+          {sortDirection === 'desc' ? 'Desc' : 'Asc'}
         </button>
-      {/each}
+      </div>
     </div>
 
-    <div class="sort-controls">
-      {#each SORT_OPTIONS as option}
-        <button
-          type="button"
-          class={`sort-button ${sortBy === option ? 'active' : ''}`}
-          onclick={() => setSortBy(option)}
-        >
-          {labelForSort(option)}
-        </button>
-      {/each}
-      <button type="button" class="sort-button" onclick={toggleSortDirection}>
-        {sortDirection === 'desc' ? 'Desc' : 'Asc'}
-      </button>
-    </div>
-  </div>
+    <label class="search-field">
+      <span>Search alerts</span>
+      <input
+        type="search"
+        bind:value={searchQuery}
+        placeholder="Filter by title, rule ID, or fingerprint"
+      />
+    </label>
+  </section>
 
-  {#if error}
-    <p class="empty">Failed to load alerts: {error}</p>
-  {:else if sortedAlerts.length === 0}
-    <p class="empty">No alerts found.</p>
-  {:else}
-    <div class="alerts-table alerts-table-full">
-      <div class="table-header">Severity</div>
-      <div class="table-header">Title</div>
-      <div class="table-header">Fingerprint</div>
-      <div class="table-header">Last Seen</div>
-      <div class="table-header">Count</div>
-
-      {#each sortedAlerts as alert}
-        <div class="cell">
-          <button type="button" class="cell-button" onclick={() => openAlertDetail(alert)}>
-            <span class={`badge ${alert.severity}`}>{alert.severity}</span>
-          </button>
-        </div>
-        <div class="cell">
-          <button type="button" class="cell-button" onclick={() => openAlertDetail(alert)}>
-            {alert.title}
-          </button>
-        </div>
-        <div class="cell">
-          <button type="button" class="cell-button mono" onclick={() => openAlertDetail(alert)}>
-            {alert.fingerprint || '(none)'}
-          </button>
-        </div>
-        <div class="cell">
-          <button type="button" class="cell-button" onclick={() => openAlertDetail(alert)}>
-            {formatTimestamp(alert.last_seen)}
-          </button>
-        </div>
-        <div class="cell">
-          <button type="button" class="cell-button" onclick={() => openAlertDetail(alert)}>
-            {alert.occurrence_count}
-          </button>
-        </div>
-      {/each}
+  <section class="panel alert-results-panel">
+    <div class="section-heading">
+      <div>
+        <p class="section-kicker">Result set</p>
+        <h3>Alert feed</h3>
+      </div>
+      <span class="section-meta">{visibleAlerts.length} visible</span>
     </div>
-  {/if}
+
+    {#if error}
+      <div class="status-callout status-callout-error">
+        <div>
+          <p class="callout-label">Unable to load alerts</p>
+          <p class="callout-copy">{error}</p>
+        </div>
+      </div>
+    {:else if loading && alerts.length === 0}
+      <div class="empty-state">
+        <p class="empty-title">Loading alerts</p>
+        <p class="empty-copy">Fetching the latest alert records from the local database.</p>
+      </div>
+    {:else if visibleAlerts.length === 0}
+      <div class="empty-state">
+        <p class="empty-title">No alerts match this view</p>
+        <p class="empty-copy">
+          {searchQuery ? 'Try a broader search term or different severity filter.' : 'The current severity filter returned no alerts.'}
+        </p>
+      </div>
+    {:else}
+      <div class="alert-card-list">
+        {#each visibleAlerts as alert}
+          <article class={`alert-card severity-${alert.severity}`}>
+            <button type="button" class="alert-card-button" onclick={() => openAlertDetail(alert)}>
+              <div class="alert-card-top">
+                <div class="alert-card-title-group">
+                  <span class={`badge ${alert.severity}`}>{alert.severity}</span>
+                  <h3>{alert.title}</h3>
+                  <p class="alert-card-description">{alert.description}</p>
+                </div>
+
+                <div class="alert-card-stats">
+                  <span class="subtle-label">Last seen</span>
+                  <strong>{formatTimestamp(alert.last_seen)}</strong>
+                  <span class="subtle-meta">{formatRelativeTime(alert.last_seen)}</span>
+                </div>
+              </div>
+
+              <div class="meta-chip-row">
+                <span class="meta-chip mono">{formatFingerprint(alert.fingerprint)}</span>
+                <span class="meta-chip mono">{alert.rule_id}</span>
+                <span class="meta-chip">{alert.occurrence_count} occurrences</span>
+                <span class="meta-chip">First seen {formatTimestamp(alert.first_seen)}</span>
+              </div>
+
+              <div class="card-action-row">
+                <span class="card-action-copy">{alert.recommended_action}</span>
+                <span class="card-action-link">Inspect alert</span>
+              </div>
+            </button>
+          </article>
+        {/each}
+      </div>
+    {/if}
+  </section>
 </section>
 
 {#if selectedAlert}
